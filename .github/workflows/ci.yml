@@ -2,28 +2,48 @@ name: Java CI with Maven
 
 on:
   push:
-    branches: [ "main" ]
+    branches:
+      - main
   pull_request:
-    branches: [ "main" ]
+    branches:
+      - main
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
+    # Checkout the code
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v2
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v3
+    # Set up Java 11 (or any version you need)
+    - name: Set up JDK 11
+      uses: actions/setup-java@v2
       with:
-        java-version: '17'
-        distribution: 'temurin'
+        java-version: '11'
 
+    # Cache Maven dependencies to speed up builds
+    - name: Cache Maven dependencies
+      uses: actions/cache@v2
+      with:
+        path: ~/.m2/repository
+        key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+        restore-keys: |
+          ${{ runner.os }}-maven-
+
+    # Build the project with Maven
     - name: Build with Maven
-      run: mvn -f pom.xml clean compile
+      run: mvn clean install -DskipTests
 
-    - name: Run Tests with Maven
-      run: |
-        echo "Running tests from unusual directory structure"
-        mvn -f pom.xml test -Dtest=com.devops.test.ContactFormTest
+    # Run the tests with Maven
+    - name: Run tests with Maven
+      run: mvn test
+
+    # Optionally upload the test reports to GitHub
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-results
+        path: target/test-classes/testng-results.xml
